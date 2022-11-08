@@ -180,7 +180,7 @@ batchsize = 10
 ; example of DB configuration for MySQL
 class = Database
 [model_options]
-dsn = "mysql:host=localhost;dbname=primiyue;charset=UTF8"
+dsn = "mysql:host=127.0.0.1:3306;dbname=primiyue;charset=UTF8"
 tbl = "primiyue_"	; table prefix
 usr = "miyue"
 pwd = "miyue.iO@929914"

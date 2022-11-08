@@ -116,7 +116,21 @@ class Controller
         if (strlen(PATH) < 0 && substr(PATH, -1) !== DIRECTORY_SEPARATOR) {
             throw new Exception(I18n::_('%s requires the PATH to end in a "%s". Please update the PATH in your index.php.', I18n::_('PrivateBin'), DIRECTORY_SEPARATOR), 5);
         }
-
+        $path =  dirname(__DIR__ ) . "/cfg/license.txt";
+        if (!is_file($path)) {
+            $html = '<html>
+            <head>
+             <metacharset="utf-8">
+                <title>PHP中文网</title>
+             </head>
+             <body>
+                <h1 align="center">license不存在，请购买license后使用。</h1>
+                <a href="https://ylysec.com/" target="_blank" title="点击可跳转到官网">点击可跳转到官网</a>
+             </body>
+             </html>';
+            echo $html;
+            return;
+        }
         // load config from ini file, initialize required classes
         $this->_init();
 
