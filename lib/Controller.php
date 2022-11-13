@@ -117,12 +117,11 @@ class Controller
         if (strlen(PATH) < 0 && substr(PATH, -1) !== DIRECTORY_SEPARATOR) {
             throw new Exception(I18n::_('%s requires the PATH to end in a "%s". Please update the PATH in your index.php.', I18n::_('PrivateBin'), DIRECTORY_SEPARATOR), 5);
         }
-        $path =  dirname(__DIR__ ) . "/cfg/license.txt";
-        if (!is_file($path)) {
+        $conf = License::GetLicense();
+        if ($conf["max_num"] == 0) {
             $html = '<html>
             <head>
              <metacharset="utf-8">
-                <title>PHP中文网</title>
              </head>
              <body>
                 <h1 align="center">license不存在，请购买license后使用。</h1>
@@ -131,9 +130,31 @@ class Controller
              </html>';
             echo $html;
             return;
-        }
+        } 
         // load config from ini file, initialize required classes
         $this->_init();
+
+        $token = $this->_request->getParam('token');
+        $name = Token::GetName($token);
+
+        $currentNum = $this->getCurrentActiveNum();
+        $currentNum = 5;
+        if (($currentNum < $conf["max_num"]) || ($currentNum == $conf["max_num"] && $this->selfIsActive($name))) {
+        } else {
+            $html = '<html>
+            <head>
+             <metacharset="utf-8">
+             </head>
+             <body>
+                <h1 align="center">当前使用人数超过限制，请升级后使用</h1>
+                <a href="https://ylysec.com/" target="_blank" title="点击可跳转到官网">点击可跳转到官网</a>
+             </body>
+             </html>';
+            echo $html;
+            return;
+        }
+
+
         switch ($this->_request->getOperation()) {
             case 'create':
                 $this->_create();
@@ -152,6 +173,12 @@ class Controller
                 return;
             case 'login':
                 $this->login($this->_request->getParam('user_name'),$this->_request->getParam('user_pass_wd'));
+            case 'upload_active':
+                $token = $this->_request->getParam('token');
+                $this->uploadActive(Token::GetName($token));
+            case 'logout':
+                $token = $this->_request->getParam('token');
+                $this->logout(Token::GetName($token));
         }
 
         // output JSON or HTML
@@ -287,7 +314,6 @@ class Controller
         $db = Database::getInstance($conf);
         $userInfo = $db->getUserInfo($name);
         if (key_exists('id',$userInfo)) {
-            error_log('json_data ' . json_encode($userInfo));
             if ($password == $userInfo['passwd']) {
                 $this->_return_message(0,"",array("token" => Token::GenerateToken($name)));
                 return;
@@ -297,6 +323,61 @@ class Controller
         }
         $db->saveUserInfo($name, $password);
         $this->_return_message(0,"",array("token" => Token::GenerateToken($name)));
+    }
+
+    /**
+     * uploadActive
+     *
+     * @access private
+     * @param  string $name
+     */
+    private function uploadActive($name) {
+        $conf = $this->_conf->getSection('model_options');
+        $db = Database::getInstance($conf);
+        $userInfo = $db->getUserInfo($name);
+        if (key_exists('id',$userInfo)) {
+            $db->saveActiveInfo($name);
+        }
+        $this->_return_message(0,"",array());
+    }
+
+     /**
+     * getCurrentActiveNum
+     *
+     * @access private
+     */
+    private function getCurrentActiveNum() {
+        $conf = $this->_conf->getSection('model_options');
+        $db = Database::getInstance($conf);
+        return $db->getCurrentActiveNum();
+    }
+
+        /**
+     * login
+     *
+     * @access private
+     * @param  string $name
+     */
+    private function selfIsActive($name){
+        $conf = $this->_conf->getSection('model_options');
+        $db = Database::getInstance($conf);
+        return $db->userIsActive($name);
+    }
+
+        /**
+     * login
+     *
+     * @access private
+     * @param  string $name
+     */
+    private function logOut($name) {
+        $conf = $this->_conf->getSection('model_options');
+        $db = Database::getInstance($conf);
+        $userInfo = $db->getUserInfo($name);
+        if (key_exists('id',$userInfo)) {
+            $db->deleteActiveInfo($name);
+        }
+        $this->_return_message(0,"",array());
     }
 
     /**

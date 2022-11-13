@@ -116,6 +116,12 @@ class Request
                 if (array_key_exists("login",$this->_params)) {
                     $this->_operation = 'login';
                 }
+                if (array_key_exists("upload_active",$this->_params)) {
+                    $this->_operation = 'upload_active';
+                }
+                if (array_key_exists("logout",$this->_params)) {
+                    $this->_operation = 'logout';
+                }
                 break;
             default:
                 $this->_params = $_GET;

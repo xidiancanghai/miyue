@@ -4,7 +4,7 @@ namespace PrivateBin;
 
 class Ras {
     public static function Decrypy($src)  {
-        return  self::RSA_openssl($src,"encode");
+        return  self::RSA_openssl($src,"decode");
     }
     
     

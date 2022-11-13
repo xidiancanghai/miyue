@@ -121,6 +121,10 @@ class Database extends AbstractData
                 self::_createUserInfoTable();
                 $db_tables_exist = false;
             }
+            if (!in_array(self::_sanitizeIdentifier('active_info'), $tables)) {
+                self::_createActiveTable();
+                $db_tables_exist = false;
+            }
 
             // create comment table if necessary
             if (!in_array(self::_sanitizeIdentifier('comment'), $tables)) {
@@ -343,6 +347,82 @@ class Database extends AbstractData
             return false;
         }
     }
+
+    /**
+     * 注册 a paste and its discussion.
+     *
+     * @access public
+     * @param  string $name 
+     */
+    public function saveActiveInfo($name)
+    {
+        try {
+            return self::_exec(
+                'INSERT INTO ' . self::_sanitizeIdentifier('active_info') .
+                '  (`name`,`update_time`) VALUES(?,?) on duplicate key update update_time = ?',
+                array(
+                    $name,
+                    time(),
+                    time(),
+                )
+            );
+        } catch (Exception $e) {
+            error_log($e);
+            return false;
+        }
+    }
+
+    /**
+     * 删除 a paste and its discussion.
+     *
+     * @access public
+     * @param  string $name 
+     */
+    public function deleteActiveInfo($name)
+    {
+        self::_exec(
+            'DELETE FROM "' . self::_sanitizeIdentifier('active_info') .
+            '" WHERE "name" = ?', array($name)
+        );
+    }
+
+        /**
+     * 注册 a paste and its discussion.
+     *
+     * @access public
+     */
+    public function getCurrentActiveNum()
+    {
+        $rows = self::_select(
+            'SELECT count(*) as num FROM "' . self::_sanitizeIdentifier('active_info') .
+            '" WHERE "update_time" >= ?', array(time() - 5*60)
+        );
+        $num = 0;
+        foreach ($rows as $row) {
+            $num =  $row['num'];
+        }
+        return $num;
+    }
+
+    /**
+     * 自身是否活跃
+     * @access public
+     * @param string $name
+     */
+    public function userIsActive($name)
+    {
+        $rows = self::_select(
+            'SELECT count(*) as num FROM "' . self::_sanitizeIdentifier('active_info') .
+            '" WHERE "name" = ? and "update_time" >= ?', array($name, time() - 5*60)
+        );
+        $num = 0;
+        foreach ($rows as $row) {
+            $num =  $row['num'];
+        }
+        return $num > 0;
+    }
+
+
 
     /**
      * 注册 a paste and its discussion.
@@ -881,12 +961,11 @@ class Database extends AbstractData
      */
     private static function _createActiveTable()
     {
-        $sqlStr = 'CREATE TABLE IF NOT EXISTS ' . self::_sanitizeIdentifier('active').' (' .
-            '`name` varchar(32) not null default \'\','.
-            '`is_delete` tinyint not null default 0,'.
-            '`create_time` int not null default 0,'.
-            'unique key (`name`)'.
-          ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;';
+        $sqlStr = 'CREATE TABLE IF NOT EXISTS ' . self::_sanitizeIdentifier('active_info').' (' .
+            '`name` varchar(32) NOT NULL DEFAULT \'\','.
+            '`update_time` int NOT NULL DEFAULT \'0\','.
+            'PRIMARY KEY (`name`)'.
+            ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;';
           self::$_db->exec($sqlStr);
     }
 

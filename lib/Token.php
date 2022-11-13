@@ -15,7 +15,18 @@ class Token {
     public static function ParseToken($data) {
         $data = base64_decode($data);
         $token = Aes::Decrypt($data);
-        return json_decode($token);
+        return json_decode($token,true);
+    }
+
+    public static function GetName($data) {
+        if ($data == "") {
+            return "";
+        }
+        $arr = self::ParseToken($data);
+        if ($arr == "") {
+            return "";
+        }
+        return $arr["name"];
     }
 }
 ?>
