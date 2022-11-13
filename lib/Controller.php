@@ -15,6 +15,7 @@ namespace PrivateBin;
 use Exception;
 use PrivateBin\Persistence\ServerSalt;
 use PrivateBin\Persistence\TrafficLimiter;
+use PrivateBin\Data\Database;
 
 /**
  * Controller
@@ -133,7 +134,6 @@ class Controller
         }
         // load config from ini file, initialize required classes
         $this->_init();
-
         switch ($this->_request->getOperation()) {
             case 'create':
                 $this->_create();
@@ -150,6 +150,8 @@ class Controller
             case 'jsonld':
                 $this->_jsonld($this->_request->getParam('jsonld'));
                 return;
+            case 'login':
+                $this->login($this->_request->getParam('user_name'),$this->_request->getParam('user_pass_wd'));
         }
 
         // output JSON or HTML
@@ -271,6 +273,30 @@ class Controller
             }
             $this->_return_message(0, $paste->getId(), array('deletetoken' => $paste->getDeleteToken()));
         }
+    }
+
+    /**
+     * login
+     *
+     * @access private
+     * @param  string $name
+     * @param  string $password
+     */
+    private function login($name, $password) {
+        $conf = $this->_conf->getSection('model_options');
+        $db = Database::getInstance($conf);
+        $userInfo = $db->getUserInfo($name);
+        if (key_exists('id',$userInfo)) {
+            error_log('json_data ' . json_encode($userInfo));
+            if ($password == $userInfo['passwd']) {
+                $this->_return_message(0,"",array("token" => Token::GenerateToken($name)));
+                return;
+            } 
+            $this->_return_message(1,"该用户已存在");
+            return;
+        }
+        $db->saveUserInfo($name, $password);
+        $this->_return_message(0,"",array("token" => Token::GenerateToken($name)));
     }
 
     /**

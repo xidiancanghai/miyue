@@ -113,6 +113,9 @@ class Request
                 $this->_params    = Json::decode(
                     file_get_contents(self::$_inputStream)
                 );
+                if (array_key_exists("login",$this->_params)) {
+                    $this->_operation = 'login';
+                }
                 break;
             default:
                 $this->_params = $_GET;

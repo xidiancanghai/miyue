@@ -112,10 +112,13 @@ class Database extends AbstractData
 
             // check if the database contains the required tables
             $tables = self::$_db->query($tableQuery)->fetchAll(PDO::FETCH_COLUMN, 0);
-
             // create paste table if necessary
             if (!in_array(self::_sanitizeIdentifier('paste'), $tables)) {
                 self::_createPasteTable();
+                $db_tables_exist = false;
+            }
+            if (!in_array(self::_sanitizeIdentifier('user_info'), $tables)) {
+                self::_createUserInfoTable();
                 $db_tables_exist = false;
             }
 
@@ -314,6 +317,55 @@ class Database extends AbstractData
         ) {
             unset(self::$_cache[$pasteid]);
         }
+    }
+
+    /**
+     * 注册 a paste and its discussion.
+     *
+     * @access public
+     * @param  string $name 
+     * @param string $passwd
+     */
+    public function saveUserInfo($name, $password)
+    {
+        try {
+            return self::_exec(
+                'INSERT INTO ' . self::_sanitizeIdentifier('user_info') .
+                '  (`name`,`passwd`,`is_delete`,create_time) VALUES(?,?,?,?)',
+                array(
+                    $name,
+                    $password,
+                    0,
+                    time(),
+                )
+            );
+        } catch (Exception $e) {
+            return false;
+        }
+    }
+
+    /**
+     * 注册 a paste and its discussion.
+     *
+     * @access public
+     * @param  string $name 
+     * @return array
+     */
+    public function getUserInfo($name)
+    {
+        $rows = self::_select(
+            'SELECT * FROM "' . self::_sanitizeIdentifier('user_info') .
+            '" WHERE "name" = ?', array($name)
+        );
+        $userInfos = array();
+        foreach ($rows as $row) {
+            $userInfos['id'] = $row['id'];
+            $userInfos['name'] = $row['name'];
+            $userInfos['passwd'] = $row['passwd'];
+            $userInfos['is_delete'] = $row['is_delete'];
+            $userInfos['create_time'] = $row['create_time'];
+        }
+        return $userInfos;
     }
 
     /**
@@ -800,6 +852,42 @@ class Database extends AbstractData
             "\"attachment\" $attachmentType, " .
             "\"attachmentname\" $dataType$after_key )"
         );
+    }
+
+    /**
+     * create the paste table
+     *
+     * @access private
+     * @static
+     */
+    private static function _createUserInfoTable()
+    {
+        $sqlStr = 'CREATE TABLE IF NOT EXISTS ' . self::_sanitizeIdentifier('user_info').' (' .
+            '`id` INT NOT NULL AUTO_INCREMENT primary key,'.
+            '`name` varchar(32) not null default \'\','.
+            '`passwd`  varchar(32) not null default \'\','.
+            '`is_delete` tinyint not null default 0,'.
+            '`create_time` int not null default 0,'.
+            'unique key (`name`)'.
+          ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;';
+          self::$_db->exec($sqlStr);
+    }
+
+        /**
+     * create the paste table
+     *
+     * @access private
+     * @static
+     */
+    private static function _createActiveTable()
+    {
+        $sqlStr = 'CREATE TABLE IF NOT EXISTS ' . self::_sanitizeIdentifier('active').' (' .
+            '`name` varchar(32) not null default \'\','.
+            '`is_delete` tinyint not null default 0,'.
+            '`create_time` int not null default 0,'.
+            'unique key (`name`)'.
+          ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;';
+          self::$_db->exec($sqlStr);
     }
 
     /**
